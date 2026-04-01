@@ -1,0 +1,9 @@
+# Optional: kubectl apply -k infra/k8s
+# Apply namespace first if not using kustomize namespace transformer:
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: filesmanager
+resources:
+  - namespace.yaml
+  - backend.yaml
+  - frontend.yaml

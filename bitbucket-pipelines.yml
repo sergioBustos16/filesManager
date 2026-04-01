@@ -1,0 +1,55 @@
+# Builds and pushes Docker images for `develop` and `master` only (other branches do not run).
+#
+# Repository variables (Settings → Pipelines → Repository variables):
+#   DOCKER_REGISTRY     — Image prefix, e.g. docker.io/myuser  OR  gcr.io/my-project  OR  us-docker.pkg.dev/my-project/my-repo
+#   DOCKER_USERNAME     — Registry login (mark secret if needed)
+#   DOCKER_PASSWORD     — Token or password (secured)
+#
+# Optional:
+#   IMAGE_NAME_PREFIX   — defaults to filesmanager → images filesmanager-backend / filesmanager-frontend
+
+image: atlassian/default-image:4
+
+definitions:
+  services:
+    docker:
+      memory: 3072
+  steps:
+    - step: &build-push
+        name: Build and push Docker images
+        services:
+          - docker
+        script:
+          - set -e
+          - |
+            if [ -z "$DOCKER_REGISTRY" ] || [ -z "$DOCKER_USERNAME" ] || [ -z "$DOCKER_PASSWORD" ]; then
+              echo "Set DOCKER_REGISTRY, DOCKER_USERNAME, and DOCKER_PASSWORD in repository variables."
+              exit 1
+            fi
+          - export PREFIX="${IMAGE_NAME_PREFIX:-filesmanager}"
+          - export SHORT_SHA="${BITBUCKET_COMMIT:0:7}"
+          - export REGISTRY_HOST="${DOCKER_REGISTRY%%/*}"
+          - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin "$REGISTRY_HOST"
+          - |
+            docker build \
+              -t "${DOCKER_REGISTRY}/${PREFIX}-backend:${BITBUCKET_BRANCH}" \
+              -t "${DOCKER_REGISTRY}/${PREFIX}-backend:${BITBUCKET_BRANCH}-${SHORT_SHA}" \
+              -f apps/backend/Dockerfile \
+              apps/backend
+          - docker push "${DOCKER_REGISTRY}/${PREFIX}-backend:${BITBUCKET_BRANCH}"
+          - docker push "${DOCKER_REGISTRY}/${PREFIX}-backend:${BITBUCKET_BRANCH}-${SHORT_SHA}"
+          - |
+            docker build \
+              -t "${DOCKER_REGISTRY}/${PREFIX}-frontend:${BITBUCKET_BRANCH}" \
+              -t "${DOCKER_REGISTRY}/${PREFIX}-frontend:${BITBUCKET_BRANCH}-${SHORT_SHA}" \
+              -f apps/frontend/Dockerfile \
+              apps/frontend
+          - docker push "${DOCKER_REGISTRY}/${PREFIX}-frontend:${BITBUCKET_BRANCH}"
+          - docker push "${DOCKER_REGISTRY}/${PREFIX}-frontend:${BITBUCKET_BRANCH}-${SHORT_SHA}"
+
+pipelines:
+  branches:
+    develop:
+      - step: *build-push
+    master:
+      - step: *build-push

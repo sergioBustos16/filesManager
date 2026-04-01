@@ -1,0 +1,106 @@
+# Backend API (NestJS). Replace placeholders before apply:
+#   - image: container image from your registry / pipeline
+#   - Ingress host (api.example.com)
+#   - iam.gke.io/gcp-service-account: Workload Identity (GCS); remove annotation if unused
+# Apply after: namespace.yaml, backend-secrets.yaml (see backend-secrets.example.yaml)
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: filesmanager-backend
+  namespace: filesmanager
+  annotations:
+    iam.gke.io/gcp-service-account: BACKEND_GSA@PROJECT_ID.iam.gserviceaccount.com
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: filesmanager-backend
+  namespace: filesmanager
+  labels:
+    app: filesmanager-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: filesmanager-backend
+  template:
+    metadata:
+      labels:
+        app: filesmanager-backend
+    spec:
+      serviceAccountName: filesmanager-backend
+      containers:
+        - name: backend
+          image: YOUR_REGISTRY/filesmanager-backend:master
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3005
+          env:
+            - name: PORT
+              value: "3005"
+            - name: NODE_ENV
+              value: production
+            - name: API_PUBLIC_URL
+              value: https://api.example.com
+            - name: CORS_ORIGIN
+              value: https://app.example.com
+          envFrom:
+            - secretRef:
+                name: filesmanager-backend-secrets
+                optional: true
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: filesmanager-backend
+  namespace: filesmanager
+  labels:
+    app: filesmanager-backend
+spec:
+  type: ClusterIP
+  selector:
+    app: filesmanager-backend
+  ports:
+    - name: http
+      port: 3005
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: filesmanager-backend
+  namespace: filesmanager
+  annotations:
+    kubernetes.io/ingress.class: gce
+spec:
+  rules:
+    - host: api.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: filesmanager-backend
+                port:
+                  number: 3005
