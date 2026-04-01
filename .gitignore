@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+
+# Lockfiles (not committed; run `npm install` after clone)
+package-lock.json
+**/package-lock.json
+
+# Cursor / IDE
+.cursor/
+.idea/
+.vscode/
+*.swp
+.fleet
+
+# Postman (local collections / exports)
+postman/
+
+# Environment and secrets (keep *.env.example)
+.env
+**/.env
+!**/.env.example
+**/gcp-sa.json
+
+# Backend (NestJS)
+apps/backend/dist/
+apps/backend/storage/
+apps/backend/coverage/
+
+# Frontend (Nuxt)
+apps/frontend/.output/
+apps/frontend/.nuxt/
+apps/frontend/.nitro/
+apps/frontend/.cache/
+apps/frontend/.data/
+apps/frontend/dist/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+*.local
