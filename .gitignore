@@ -3,7 +3,7 @@ node_modules/
 
 # Lockfiles (not committed; run `npm install` after clone)
 package-lock.json
-**/package-lock.json
+package.json
 
 # Cursor / IDE
 .cursor/
