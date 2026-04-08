@@ -29,13 +29,19 @@ export const useFiles = () => {
       },
     });
 
-    await fetch(uploadInfo.signedUrl, {
+    const putRes = await fetch(uploadInfo.signedUrl, {
       method: 'PUT',
       headers: {
-        'Content-Type': file.type,
+        'Content-Type': file.type || 'application/octet-stream',
       },
       body: file,
     });
+    if (!putRes.ok) {
+      const detail = await putRes.text().catch(() => '');
+      throw new Error(
+        `Upload to storage failed (${putRes.status}): ${detail || putRes.statusText}`,
+      );
+    }
 
     return $apiFetch<FileItem>(`/folders/${folderId}/files`, {
       method: 'POST',

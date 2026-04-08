@@ -3,12 +3,16 @@ import { ConfigService } from '@nestjs/config';
 import { StorageAdapter, UploadUrlResult } from './storage.types';
 import { GcsStorageAdapter } from './adapters/gcs-storage.adapter';
 import { LocalStorageAdapter } from './adapters/local-storage.adapter';
+import { LocalStorageTokenService } from './local-storage-token.service';
 
 @Injectable()
 export class StorageService {
   private readonly adapter: StorageAdapter;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly localStorageTokenService: LocalStorageTokenService,
+  ) {
     const backend = this.configService.get<string>('storage.backend');
     if (backend === 'local') {
       const publicBase =
@@ -17,6 +21,8 @@ export class StorageService {
       this.adapter = new LocalStorageAdapter(
         this.configService.get<string>('storage.localRoot') ?? 'storage',
         publicBase,
+        this.configService,
+        this.localStorageTokenService,
       );
       return;
     }
@@ -27,7 +33,11 @@ export class StorageService {
     );
   }
 
-  async createUploadRequest(folderId: string, fileId: string, mimeType: string): Promise<UploadUrlResult> {
+  async createUploadRequest(
+    folderId: string,
+    fileId: string,
+    mimeType: string,
+  ): Promise<UploadUrlResult> {
     const objectPath = `folders/${folderId}/${fileId}`;
     const signedUrl = await this.adapter.getUploadUrl(objectPath, mimeType);
     return { signedUrl, objectPath };
@@ -39,5 +49,9 @@ export class StorageService {
 
   deleteObject(objectPath: string): Promise<void> {
     return this.adapter.deleteObject(objectPath);
+  }
+
+  async fileExists(objectPath: string): Promise<boolean> {
+    return this.adapter.fileExists(objectPath);
   }
 }

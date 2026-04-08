@@ -139,7 +139,10 @@ const onDownload = async (fileId: string) => {
   if (!id) return;
   try {
     const { signedUrl } = await downloadRequest(id, fileId);
-    await navigateTo(signedUrl, { external: true });
+    const opened = window.open(signedUrl, '_blank', 'noopener,noreferrer');
+    if (!opened) {
+      toast.show('Could not open a new tab (check pop-up settings)', 'error');
+    }
   } catch {
     toast.show('Download failed', 'error');
   }

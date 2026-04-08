@@ -23,7 +23,7 @@ export class FileEntity {
   @Column()
   path!: string;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'integer' })
   size!: number;
 
   @Column()
@@ -35,6 +35,9 @@ export class FileEntity {
     default: FileStatus.READY,
   })
   status!: FileStatus;
+
+  @Column()
+  createdById!: string;
 
   @CreateDateColumn()
   createdAt!: Date;

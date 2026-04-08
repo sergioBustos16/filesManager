@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Folder } from './entities/folder.entity';
@@ -9,7 +13,8 @@ import { UpsertPermissionDto } from './dto/upsert-permission.dto';
 @Injectable()
 export class FoldersService {
   constructor(
-    @InjectRepository(Folder) private readonly foldersRepository: Repository<Folder>,
+    @InjectRepository(Folder)
+    private readonly foldersRepository: Repository<Folder>,
     @InjectRepository(FolderPermission)
     private readonly permissionsRepository: Repository<FolderPermission>,
   ) {}
@@ -98,7 +103,8 @@ export class FoldersService {
     }
 
     const canRead = folder.permissions.some(
-      (permission) => permission.canRead && groupNames.includes(permission.group.name),
+      (permission) =>
+        permission.canRead && groupNames.includes(permission.group.name),
     );
     if (!canRead) {
       throw new ForbiddenException('No read access for this folder.');
@@ -121,7 +127,9 @@ export class FoldersService {
     const isAdmin = groupNames.includes('Admin');
     const isOwner = folder.createdById === userId;
     if (!isAdmin && !isOwner) {
-      throw new ForbiddenException('Only the folder owner or an admin can change permissions.');
+      throw new ForbiddenException(
+        'Only the folder owner or an admin can change permissions.',
+      );
     }
 
     let permission = await this.permissionsRepository.findOne({
@@ -129,7 +137,10 @@ export class FoldersService {
     });
 
     if (!permission) {
-      permission = this.permissionsRepository.create({ folderId, groupId: dto.groupId });
+      permission = this.permissionsRepository.create({
+        folderId,
+        groupId: dto.groupId,
+      });
     }
 
     permission.canRead = dto.canRead;

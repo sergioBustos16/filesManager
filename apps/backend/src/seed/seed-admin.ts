@@ -17,9 +17,19 @@ async function seed() {
     const userRepo = dataSource.getRepository(User);
     const groupRepo = dataSource.getRepository(Group);
 
-    const email = process.env.ADMIN_EMAIL ?? 'admin@localhost';
-    const password = process.env.ADMIN_PASSWORD ?? 'AdminPass123!';
-    const name = process.env.ADMIN_NAME ?? 'Administrator';
+    const email = process.env.ADMIN_EMAIL;
+    const password = process.env.ADMIN_PASSWORD;
+    const name = process.env.ADMIN_NAME;
+
+    if (!email) {
+      throw new Error('ADMIN_EMAIL must be set');
+    }
+    if (!password) {
+      throw new Error('ADMIN_PASSWORD must be set');
+    }
+    if (!name) {
+      throw new Error('ADMIN_NAME must be set');
+    }
 
     let group = await groupRepo.findOne({ where: { name: ADMIN_GROUP_NAME } });
     if (!group) {
@@ -44,7 +54,9 @@ async function seed() {
         groups: [group],
       });
       await userRepo.save(user);
-      console.log(`Created admin user ${email} (password from ADMIN_PASSWORD or default)`);
+      console.log(
+        `Created admin user ${email} (password from ADMIN_PASSWORD or default)`,
+      );
     } else {
       const inAdmin = user.groups?.some((g) => g.name === ADMIN_GROUP_NAME);
       if (!inAdmin) {

@@ -8,7 +8,8 @@ import { AssignUserDto, CreateGroupDto } from './dto';
 @Injectable()
 export class GroupsService {
   constructor(
-    @InjectRepository(Group) private readonly groupsRepository: Repository<Group>,
+    @InjectRepository(Group)
+    private readonly groupsRepository: Repository<Group>,
     @InjectRepository(User) private readonly usersRepository: Repository<User>,
   ) {}
 
@@ -34,7 +35,9 @@ export class GroupsService {
       throw new NotFoundException('User not found.');
     }
 
-    const alreadyInGroup = group.users.some((existingUser) => existingUser.id === user.id);
+    const alreadyInGroup = group.users.some(
+      (existingUser) => existingUser.id === user.id,
+    );
     if (!alreadyInGroup) {
       group.users.push(user);
       await this.groupsRepository.save(group);

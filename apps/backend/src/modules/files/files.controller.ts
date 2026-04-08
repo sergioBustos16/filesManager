@@ -1,4 +1,12 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+} from '@nestjs/common';
 import { FilesService } from './files.service';
 import { UploadRequestDto } from './dto/upload-request.dto';
 import { CreateFileDto } from './dto/create-file.dto';
@@ -10,7 +18,10 @@ export class FilesController {
   constructor(private readonly filesService: FilesService) {}
 
   @Get()
-  list(@Param('folderId', ParseUUIDPipe) folderId: string, @CurrentUser() user: AuthUser) {
+  list(
+    @Param('folderId', ParseUUIDPipe) folderId: string,
+    @CurrentUser() user: AuthUser,
+  ) {
     return this.filesService.list(folderId, user.groups, user.sub);
   }
 
@@ -20,7 +31,12 @@ export class FilesController {
     @CurrentUser() user: AuthUser,
     @Body() dto: UploadRequestDto,
   ) {
-    return this.filesService.uploadRequest(folderId, dto, user.groups, user.sub);
+    return this.filesService.uploadRequest(
+      folderId,
+      dto,
+      user.groups,
+      user.sub,
+    );
   }
 
   @Post()
@@ -38,7 +54,12 @@ export class FilesController {
     @Param('fileId', ParseUUIDPipe) fileId: string,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.filesService.downloadRequest(folderId, fileId, user.groups, user.sub);
+    return this.filesService.downloadRequest(
+      folderId,
+      fileId,
+      user.groups,
+      user.sub,
+    );
   }
 
   @Delete(':fileId')

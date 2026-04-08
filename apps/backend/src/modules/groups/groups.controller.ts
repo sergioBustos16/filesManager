@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { GroupsService } from './groups.service';
 import { AssignUserDto, CreateGroupDto } from './dto';
 import { AdminGuard } from '../../common/admin.guard';
@@ -20,7 +28,10 @@ export class GroupsController {
 
   @UseGuards(AdminGuard)
   @Post(':groupId/users')
-  assign(@Param('groupId', ParseUUIDPipe) groupId: string, @Body() dto: AssignUserDto) {
+  assign(
+    @Param('groupId', ParseUUIDPipe) groupId: string,
+    @Body() dto: AssignUserDto,
+  ) {
     return this.groupsService.assignUser(groupId, dto);
   }
 }
