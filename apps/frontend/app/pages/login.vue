@@ -56,11 +56,5 @@ const onSubmit = async () => {
         Sign in
       </button>
     </form>
-    <p class="mt-6 text-center text-sm text-slate-600">
-      No account?
-      <NuxtLink to="/register" class="font-medium text-indigo-600 hover:text-indigo-500">
-        Create account
-      </NuxtLink>
-    </p>
   </div>
 </template>

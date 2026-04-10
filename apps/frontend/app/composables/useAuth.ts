@@ -28,15 +28,6 @@ export const useAuth = () => {
     await fetchMe(response.accessToken);
   };
 
-  const register = async (name: string, email: string, password: string) => {
-    const response = await $apiFetch<AuthResponse>('/auth/register', {
-      method: 'POST',
-      body: { name, email, password },
-    });
-    token.value = response.accessToken;
-    await fetchMe(response.accessToken);
-  };
-
   /** Pass accessToken from login/register so the next /users/me call uses it immediately (cookie can lag one tick). */
   const fetchMe = async (accessTokenOverride?: string) => {
     const t = accessTokenOverride ?? token.value;
@@ -61,7 +52,6 @@ export const useAuth = () => {
     token,
     user,
     login,
-    register,
     fetchMe,
     logout,
   };

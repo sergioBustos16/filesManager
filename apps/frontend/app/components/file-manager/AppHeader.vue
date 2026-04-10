@@ -42,6 +42,14 @@ const { logout } = useAuth();
         <Users class="h-4 w-4" aria-hidden="true" />
         Groups
       </NuxtLink>
+      <NuxtLink
+        v-if="isAdmin"
+        to="/admin/users"
+        class="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+      >
+        <Users class="h-4 w-4" aria-hidden="true" />
+        Users
+      </NuxtLink>
       <span v-if="isAdmin" class="inline-flex items-center gap-1 text-xs font-medium text-indigo-600">
         <Shield class="h-3.5 w-3.5" aria-hidden="true" />
         Admin

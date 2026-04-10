@@ -8,7 +8,6 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { User } from '../users/entities/user.entity';
-import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
 @Injectable()
@@ -17,23 +16,6 @@ export class AuthService {
     @InjectRepository(User) private readonly usersRepository: Repository<User>,
     private readonly jwtService: JwtService,
   ) {}
-
-  async register(dto: RegisterDto) {
-    const exists = await this.usersRepository.existsBy({ email: dto.email });
-    if (exists) {
-      throw new ConflictException('Email already exists.');
-    }
-
-    const passwordHash = await bcrypt.hash(dto.password, 10);
-    const user = this.usersRepository.create({
-      email: dto.email,
-      name: dto.name,
-      passwordHash,
-      groups: [],
-    });
-    const saved = await this.usersRepository.save(user);
-    return this.buildAuthResponse(saved);
-  }
 
   async login(dto: LoginDto) {
     const user = await this.usersRepository.findOne({
