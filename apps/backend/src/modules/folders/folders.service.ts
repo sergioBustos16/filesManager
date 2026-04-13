@@ -9,6 +9,8 @@ import { Folder } from './entities/folder.entity';
 import { FolderPermission } from './entities/folder-permission.entity';
 import { CreateFolderDto } from './dto/create-folder.dto';
 import { UpsertPermissionDto } from './dto/upsert-permission.dto';
+import { StoragePrefix } from '../storage-prefixes/entities/storage-prefix.entity';
+import { StoragePrefixesService } from '../storage-prefixes/storage-prefixes.service';
 
 @Injectable()
 export class FoldersService {
@@ -17,6 +19,9 @@ export class FoldersService {
     private readonly foldersRepository: Repository<Folder>,
     @InjectRepository(FolderPermission)
     private readonly permissionsRepository: Repository<FolderPermission>,
+    @InjectRepository(StoragePrefix)
+    private readonly storagePrefixesRepository: Repository<StoragePrefix>,
+    private readonly storagePrefixesService: StoragePrefixesService,
   ) {}
 
   async listForUser(groupNames: string[], userId: string) {
@@ -59,10 +64,30 @@ export class FoldersService {
   }
 
   async create(createdById: string, dto: CreateFolderDto) {
+    // Handle storage prefix assignment
+    let storagePrefixId: string | undefined;
+
+    if (dto.storagePrefixId) {
+      // Check if the prefix exists and is active
+      const prefixEntity = await this.storagePrefixesRepository.findOneBy({
+        id: dto.storagePrefixId,
+        isActive: true
+      });
+
+      if (prefixEntity) {
+        storagePrefixId = prefixEntity.id;
+      } else {
+        // If prefix not found or not active, use default prefix
+        const defaultPrefix = await this.storagePrefixesService.getDefaultPrefix();
+        storagePrefixId = defaultPrefix.id;
+      }
+    }
+
     const folder = await this.foldersRepository.save(
       this.foldersRepository.create({
         name: dto.name,
         createdById,
+        storagePrefixId,
       }),
     );
 

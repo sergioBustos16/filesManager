@@ -6,11 +6,13 @@ import { FileEntity } from './entities/file.entity';
 import { FolderPermission } from '../folders/entities/folder-permission.entity';
 import { Folder } from '../folders/entities/folder.entity';
 import { StorageModule } from '../storage/storage.module';
+import { StoragePrefixesModule } from '../storage-prefixes/storage-prefixes.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([FileEntity, FolderPermission, Folder]),
     StorageModule,
+    StoragePrefixesModule,
   ],
   controllers: [FilesController],
   providers: [FilesService],

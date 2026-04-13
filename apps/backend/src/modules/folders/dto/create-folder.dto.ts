@@ -28,6 +28,10 @@ export class CreateFolderDto {
   @IsNotEmpty()
   name!: string;
 
+  @IsUUID()
+  @IsOptional()
+  storagePrefixId?: string;
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => InitialPermissionDto)

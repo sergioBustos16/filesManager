@@ -9,6 +9,7 @@ import {
 import { User } from '../../users/entities/user.entity';
 import { FolderPermission } from './folder-permission.entity';
 import { FileEntity } from '../../files/entities/file.entity';
+import { StoragePrefix } from '../../storage-prefixes/entities/storage-prefix.entity';
 
 @Entity('folders')
 export class Folder {
@@ -28,6 +29,15 @@ export class Folder {
     onDelete: 'RESTRICT',
   })
   createdBy!: User;
+
+  @ManyToOne(() => StoragePrefix, {
+    nullable: true,
+    eager: true,
+  })
+  storagePrefix!: StoragePrefix;
+
+  @Column({ nullable: true })
+  storagePrefixId!: string;
 
   @OneToMany(() => FolderPermission, (permission) => permission.folder)
   permissions!: FolderPermission[];

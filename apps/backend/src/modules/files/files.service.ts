@@ -43,10 +43,19 @@ export class FilesService {
     await this.assertCanWrite(folderId, groupNames, userId);
     this.validateUpload(dto.mimeType, dto.size);
     const fileId = randomUUID();
+
+    // Get the folder to retrieve the storage prefix
+    const folder = await this.foldersRepository.findOne({
+      where: { id: folderId },
+      relations: ['storagePrefix'],
+    });
+
+    const prefixSlug = folder?.storagePrefix?.slug;
     return this.storageService.createUploadRequest(
       folderId,
       fileId,
       dto.mimeType,
+      prefixSlug,
     );
   }
 

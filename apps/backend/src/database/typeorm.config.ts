@@ -4,6 +4,7 @@ import { Group } from '../modules/groups/entities/group.entity';
 import { Folder } from '../modules/folders/entities/folder.entity';
 import { FolderPermission } from '../modules/folders/entities/folder-permission.entity';
 import { FileEntity } from '../modules/files/entities/file.entity';
+import { StoragePrefix } from '../modules/storage-prefixes/entities/storage-prefix.entity';
 
 export const buildTypeOrmConfig = (): TypeOrmModuleOptions => ({
   type: 'postgres',
@@ -12,6 +13,6 @@ export const buildTypeOrmConfig = (): TypeOrmModuleOptions => ({
   username: process.env.DATABASE_USERNAME ?? 'postgres',
   password: String(process.env.DATABASE_PASSWORD ?? 'postgres'),
   database: process.env.DATABASE_NAME ?? 'filesmanager',
-  entities: [User, Group, Folder, FolderPermission, FileEntity],
+  entities: [User, Group, Folder, FolderPermission, FileEntity, StoragePrefix],
   synchronize: process.env.NODE_ENV !== 'production',
 });

@@ -108,9 +108,9 @@ const onOpenFolderFromGrid = (id: string) => {
 
 const onBack = () => clearFolderQuery();
 
-const onCreateFolderSubmit = async (name: string) => {
+const onCreateFolderSubmit = async (payload: { name: string; storagePrefixId?: string }) => {
   try {
-    await create({ name, permissions: [] });
+    await create({ name: payload.name, storagePrefixId: payload.storagePrefixId, permissions: [] });
     toast.show('Folder created', 'success');
     await loadFolders();
   } catch {

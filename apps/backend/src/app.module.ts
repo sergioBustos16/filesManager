@@ -9,6 +9,7 @@ import { UsersModule } from './modules/users/users.module';
 import { GroupsModule } from './modules/groups/groups.module';
 import { FoldersModule } from './modules/folders/folders.module';
 import { FilesModule } from './modules/files/files.module';
+import { StoragePrefixesModule } from './modules/storage-prefixes/storage-prefixes.module';
 import { JwtAuthGuard } from './modules/auth/jwt-auth.guard';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -27,6 +28,7 @@ import { AppService } from './app.service';
     GroupsModule,
     FoldersModule,
     FilesModule,
+    StoragePrefixesModule,
   ],
   controllers: [AppController],
   providers: [

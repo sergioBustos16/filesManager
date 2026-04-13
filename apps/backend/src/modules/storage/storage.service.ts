@@ -33,12 +33,29 @@ export class StorageService {
     );
   }
 
+  /**
+   * Generate object path with optional prefix
+   * Format: {prefixSlug}/{folderId}/{fileId} or folders/{folderId}/{fileId} for legacy
+   */
+  generateObjectPath(
+    folderId: string,
+    fileId: string,
+    prefixSlug?: string,
+  ): string {
+    if (prefixSlug) {
+      return `${prefixSlug}/${folderId}/${fileId}`;
+    }
+    // Legacy format for backward compatibility
+    return `folders/${folderId}/${fileId}`;
+  }
+
   async createUploadRequest(
     folderId: string,
     fileId: string,
     mimeType: string,
+    prefixSlug?: string,
   ): Promise<UploadUrlResult> {
-    const objectPath = `folders/${folderId}/${fileId}`;
+    const objectPath = this.generateObjectPath(folderId, fileId, prefixSlug);
     const signedUrl = await this.adapter.getUploadUrl(objectPath, mimeType);
     return { signedUrl, objectPath };
   }

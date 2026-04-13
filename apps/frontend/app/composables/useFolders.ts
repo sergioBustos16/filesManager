@@ -12,7 +12,19 @@ export type Folder = {
   name: string;
   createdById: string;
   createdAt: string;
+  storagePrefixId?: string;
+  storagePrefix?: {
+    id: string;
+    slug: string;
+    label: string;
+  };
   permissions?: FolderPermission[];
+};
+
+export type CreateFolderBody = {
+  name: string;
+  storagePrefixId?: string;
+  permissions?: Omit<FolderPermission, 'id'>[];
 };
 
 export const useFolders = () => {
@@ -20,7 +32,7 @@ export const useFolders = () => {
 
   const list = () => $apiFetch<Folder[]>('/folders');
   const get = (folderId: string) => $apiFetch<Folder>(`/folders/${folderId}`);
-  const create = (body: { name: string; permissions: Omit<FolderPermission, 'id'>[] }) =>
+  const create = (body: CreateFolderBody) =>
     $apiFetch<Folder>('/folders', { method: 'POST', body });
   const upsertPermission = (folderId: string, body: Omit<FolderPermission, 'id'>) =>
     $apiFetch(`/folders/${folderId}/permissions`, { method: 'PUT', body });
