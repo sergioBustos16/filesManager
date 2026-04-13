@@ -14,54 +14,55 @@ export class LocalStorageAdapter implements StorageAdapter {
     private readonly localStorageTokenService: LocalStorageTokenService,
   ) {}
 
-  getUploadUrl(objectPath: string): Promise<string> {
-    // Extract folderId and fileId from objectPath (format: folders/{folderId}/{fileId})
-    const pathParts = objectPath.split('/');
-    if (pathParts.length !== 3 || pathParts[0] !== 'folders') {
+  getUploadUrl(
+    objectPath: string,
+    _mimeType?: string,
+    _gcsBucketName?: string | null,
+  ): Promise<string> {
+    const parts = objectPath.split('/');
+    if (parts.length !== 2) {
       throw new BadRequestException('Invalid object path');
     }
 
-    const folderId = pathParts[1];
-    const fileId = pathParts[2];
-
     const base = this.publicBaseUrl.replace(/\/$/, '');
-    const token = this.localStorageTokenService.generateUploadToken(
-      folderId,
-      fileId,
-    );
+    const token =
+      this.localStorageTokenService.generateUploadToken(objectPath);
 
     return Promise.resolve(
       `${base}/local-storage/upload/${encodeURIComponent(objectPath)}?token=${token}`,
     );
   }
 
-  getDownloadUrl(objectPath: string): Promise<string> {
-    // Similar to upload, but for download token
-    const pathParts = objectPath.split('/');
-    if (pathParts.length !== 3 || pathParts[0] !== 'folders') {
+  getDownloadUrl(
+    objectPath: string,
+    _gcsBucketName?: string | null,
+  ): Promise<string> {
+    const parts = objectPath.split('/');
+    if (parts.length !== 2) {
       throw new BadRequestException('Invalid object path');
     }
 
-    const folderId = pathParts[1];
-    const fileId = pathParts[2];
-
     const base = this.publicBaseUrl.replace(/\/$/, '');
-    const token = this.localStorageTokenService.generateDownloadToken(
-      folderId,
-      fileId,
-    );
+    const token =
+      this.localStorageTokenService.generateDownloadToken(objectPath);
 
     return Promise.resolve(
       `${base}/local-storage/download/${encodeURIComponent(objectPath)}?token=${token}`,
     );
   }
 
-  async deleteObject(objectPath: string): Promise<void> {
+  async deleteObject(
+    objectPath: string,
+    _gcsBucketName?: string | null,
+  ): Promise<void> {
     const filePath = path.join(this.localRoot, objectPath);
     await fs.rm(filePath, { force: true });
   }
 
-  async fileExists(objectPath: string): Promise<boolean> {
+  async fileExists(
+    objectPath: string,
+    _gcsBucketName?: string | null,
+  ): Promise<boolean> {
     try {
       const filePath = path.join(this.localRoot, objectPath);
       await fs.access(filePath);

@@ -1,17 +1,16 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Folder } from './entities/folder.entity';
 import { FolderPermission } from './entities/folder-permission.entity';
 import { CreateFolderDto } from './dto/create-folder.dto';
 import { UpsertPermissionDto } from './dto/upsert-permission.dto';
-import { StoragePrefix } from '../storage-prefixes/entities/storage-prefix.entity';
-import { StoragePrefixesService } from '../storage-prefixes/storage-prefixes.service';
-
 @Injectable()
 export class FoldersService {
   constructor(
@@ -19,9 +18,7 @@ export class FoldersService {
     private readonly foldersRepository: Repository<Folder>,
     @InjectRepository(FolderPermission)
     private readonly permissionsRepository: Repository<FolderPermission>,
-    @InjectRepository(StoragePrefix)
-    private readonly storagePrefixesRepository: Repository<StoragePrefix>,
-    private readonly storagePrefixesService: StoragePrefixesService,
+    private readonly configService: ConfigService,
   ) {}
 
   async listForUser(groupNames: string[], userId: string) {
@@ -63,31 +60,28 @@ export class FoldersService {
     });
   }
 
-  async create(createdById: string, dto: CreateFolderDto) {
-    // Handle storage prefix assignment
-    let storagePrefixId: string | undefined;
-
-    if (dto.storagePrefixId) {
-      // Check if the prefix exists and is active
-      const prefixEntity = await this.storagePrefixesRepository.findOneBy({
-        id: dto.storagePrefixId,
-        isActive: true
-      });
-
-      if (prefixEntity) {
-        storagePrefixId = prefixEntity.id;
-      } else {
-        // If prefix not found or not active, use default prefix
-        const defaultPrefix = await this.storagePrefixesService.getDefaultPrefix();
-        storagePrefixId = defaultPrefix.id;
+  async create(createdById: string, dto: CreateFolderDto, groupNames: string[]) {
+    let gcsBucketName: string | null = null;
+    const rawBucket = dto.gcsBucketName?.trim();
+    if (rawBucket) {
+      if (!groupNames.includes('Admin')) {
+        throw new ForbiddenException('Only admins can assign a GCS bucket.');
       }
+      const allowed =
+        this.configService.get<string[]>('storage.gcsAllowedBuckets') ?? [];
+      if (!allowed.includes(rawBucket)) {
+        throw new BadRequestException(
+          `GCS bucket "${rawBucket}" is not in the allowed list.`,
+        );
+      }
+      gcsBucketName = rawBucket;
     }
 
     const folder = await this.foldersRepository.save(
       this.foldersRepository.create({
         name: dto.name,
         createdById,
-        storagePrefixId,
+        gcsBucketName,
       }),
     );
 

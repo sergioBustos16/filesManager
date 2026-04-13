@@ -39,6 +39,10 @@ export class Folder {
   @Column({ nullable: true })
   storagePrefixId!: string;
 
+  /** GCS bucket name (same project as `GCS_PROJECT_ID`). Null = use env `GCS_BUCKET`. Set only at creation. */
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  gcsBucketName!: string | null;
+
   @OneToMany(() => FolderPermission, (permission) => permission.folder)
   permissions!: FolderPermission[];
 

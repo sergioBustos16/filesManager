@@ -28,9 +28,10 @@ export class CreateFolderDto {
   @IsNotEmpty()
   name!: string;
 
-  @IsUUID()
+  /** GCS bucket (must be in server allowlist). Only honored for Admin; immutable after create. */
+  @IsString()
   @IsOptional()
-  storagePrefixId?: string;
+  gcsBucketName?: string;
 
   @IsArray()
   @ValidateNested({ each: true })

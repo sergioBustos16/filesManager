@@ -24,7 +24,7 @@ export class FoldersController {
 
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateFolderDto) {
-    return this.foldersService.create(user.sub, dto);
+    return this.foldersService.create(user.sub, dto, user.groups);
   }
 
   @Get(':folderId')

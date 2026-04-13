@@ -12,18 +12,14 @@ export type Folder = {
   name: string;
   createdById: string;
   createdAt: string;
-  storagePrefixId?: string;
-  storagePrefix?: {
-    id: string;
-    slug: string;
-    label: string;
-  };
+  gcsBucketName?: string | null;
   permissions?: FolderPermission[];
 };
 
 export type CreateFolderBody = {
   name: string;
-  storagePrefixId?: string;
+  /** GCS bucket name (Admin only; must be in server allowlist). Omit to use default bucket. */
+  gcsBucketName?: string;
   permissions?: Omit<FolderPermission, 'id'>[];
 };
 

@@ -19,50 +19,57 @@ export class LocalStorageTokenService {
     );
   }
 
-  generateUploadToken(folderId: string, fileId: string): string {
-    const payload = { folderId, fileId, type: 'upload' };
+  /** Full object key, e.g. `folders/{folderId}/{fileId}` or `{prefix}/{folderId}/{fileId}`. */
+  generateUploadToken(objectPath: string): string {
+    const payload = { objectPath, type: 'upload' };
     const secret = this.getSecret();
     const expiresIn = this.getExpiresIn() as any;
     return jwt.sign(payload, secret, { expiresIn });
   }
 
-  generateDownloadToken(folderId: string, fileId: string): string {
-    const payload = { folderId, fileId, type: 'download' };
+  generateDownloadToken(objectPath: string): string {
+    const payload = { objectPath, type: 'download' };
     const secret = this.getSecret();
     const expiresIn = this.getExpiresIn() as any;
     return jwt.sign(payload, secret, { expiresIn });
   }
 
-  validateUploadToken(token: string): { folderId: string; fileId: string } {
+  validateUploadToken(token: string): { objectPath: string } {
     try {
       const secret = this.getSecret();
       const payload = jwt.verify(token, secret) as {
-        folderId: string;
-        fileId: string;
+        objectPath: string;
         type: string;
       };
       if (payload.type !== 'upload') {
         throw new BadRequestException('Invalid token type');
       }
-      return { folderId: payload.folderId, fileId: payload.fileId };
-    } catch {
+      if (!payload.objectPath || typeof payload.objectPath !== 'string') {
+        throw new BadRequestException('Invalid upload token');
+      }
+      return { objectPath: payload.objectPath };
+    } catch (e) {
+      if (e instanceof BadRequestException) throw e;
       throw new BadRequestException('Invalid or expired upload token');
     }
   }
 
-  validateDownloadToken(token: string): { folderId: string; fileId: string } {
+  validateDownloadToken(token: string): { objectPath: string } {
     try {
       const secret = this.getSecret();
       const payload = jwt.verify(token, secret) as {
-        folderId: string;
-        fileId: string;
+        objectPath: string;
         type: string;
       };
       if (payload.type !== 'download') {
         throw new BadRequestException('Invalid token type');
       }
-      return { folderId: payload.folderId, fileId: payload.fileId };
-    } catch {
+      if (!payload.objectPath || typeof payload.objectPath !== 'string') {
+        throw new BadRequestException('Invalid download token');
+      }
+      return { objectPath: payload.objectPath };
+    } catch (e) {
+      if (e instanceof BadRequestException) throw e;
       throw new BadRequestException('Invalid or expired download token');
     }
   }

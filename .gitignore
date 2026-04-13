@@ -47,3 +47,5 @@ Thumbs.db
 *.local
 
 .claude/
+.cursor/
+.agents/

@@ -68,8 +68,7 @@ export class LocalStorageController {
     // Validate upload token and ensure it matches the requested path
     const tokenData = this.validateUploadToken(req);
     const objectPath = this.objectPathFromRouteParam(pathParam);
-    const expectedPath = `folders/${tokenData.folderId}/${tokenData.fileId}`;
-    if (objectPath !== expectedPath) {
+    if (objectPath !== tokenData.objectPath) {
       throw new ForbiddenException(
         'Upload token does not match requested path',
       );
@@ -96,8 +95,7 @@ export class LocalStorageController {
     // Validate download token and ensure it matches the requested path
     const tokenData = this.validateDownloadToken(req);
     const objectPath = this.objectPathFromRouteParam(pathParam);
-    const expectedPath = `folders/${tokenData.folderId}/${tokenData.fileId}`;
-    if (objectPath !== expectedPath) {
+    if (objectPath !== tokenData.objectPath) {
       throw new ForbiddenException(
         'Download token does not match requested path',
       );
@@ -116,10 +114,7 @@ export class LocalStorageController {
     stream.pipe(res);
   }
 
-  private validateUploadToken(req: Request): {
-    folderId: string;
-    fileId: string;
-  } {
+  private validateUploadToken(req: Request): { objectPath: string } {
     const token =
       (req.query.token as string) ||
       req.headers.authorization?.replace('Bearer ', '');
@@ -129,10 +124,7 @@ export class LocalStorageController {
     return this.localStorageTokenService.validateUploadToken(token);
   }
 
-  private validateDownloadToken(req: Request): {
-    folderId: string;
-    fileId: string;
-  } {
+  private validateDownloadToken(req: Request): { objectPath: string } {
     const token =
       (req.query.token as string) ||
       req.headers.authorization?.replace('Bearer ', '');

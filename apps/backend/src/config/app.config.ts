@@ -19,6 +19,18 @@ export default () => ({
       (process.env.NODE_ENV === 'development' ? 'local' : 'gcs'),
     localRoot: process.env.LOCAL_STORAGE_ROOT ?? 'storage',
     gcsBucket: process.env.GCS_BUCKET ?? '',
+    /** Same GCP project; additional bucket names allowed for per-folder assignment (comma-separated). */
+    gcsAllowedBuckets: (() => {
+      const primary = process.env.GCS_BUCKET?.trim() ?? '';
+      const extras = (process.env.GCS_ALLOWED_BUCKETS ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const set = new Set<string>();
+      if (primary) set.add(primary);
+      extras.forEach((b) => set.add(b));
+      return [...set];
+    })(),
     gcsProjectId: process.env.GCS_PROJECT_ID ?? '',
   },
   uploadPolicy: {

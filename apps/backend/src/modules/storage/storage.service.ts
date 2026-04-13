@@ -28,47 +28,52 @@ export class StorageService {
     }
 
     this.adapter = new GcsStorageAdapter(
-      this.configService.get<string>('storage.gcsBucket') ?? '',
       this.configService.get<string>('storage.gcsProjectId') ?? '',
+      this.configService.get<string>('storage.gcsBucket') ?? '',
     );
   }
 
   /**
-   * Generate object path with optional prefix
-   * Format: {prefixSlug}/{folderId}/{fileId} or folders/{folderId}/{fileId} for legacy
+   * Object key inside the bucket (GCS or local root): `{folderId}/{fileId}`.
+   * Bucket itself is chosen via `gcsBucketName` on the folder (or env default).
    */
-  generateObjectPath(
-    folderId: string,
-    fileId: string,
-    prefixSlug?: string,
-  ): string {
-    if (prefixSlug) {
-      return `${prefixSlug}/${folderId}/${fileId}`;
-    }
-    // Legacy format for backward compatibility
-    return `folders/${folderId}/${fileId}`;
+  generateObjectPath(folderId: string, fileId: string): string {
+    return `${folderId}/${fileId}`;
   }
 
   async createUploadRequest(
     folderId: string,
     fileId: string,
     mimeType: string,
-    prefixSlug?: string,
+    gcsBucketName?: string | null,
   ): Promise<UploadUrlResult> {
-    const objectPath = this.generateObjectPath(folderId, fileId, prefixSlug);
-    const signedUrl = await this.adapter.getUploadUrl(objectPath, mimeType);
+    const objectPath = this.generateObjectPath(folderId, fileId);
+    const signedUrl = await this.adapter.getUploadUrl(
+      objectPath,
+      mimeType,
+      gcsBucketName,
+    );
     return { signedUrl, objectPath };
   }
 
-  getDownloadUrl(objectPath: string): Promise<string> {
-    return this.adapter.getDownloadUrl(objectPath);
+  getDownloadUrl(
+    objectPath: string,
+    gcsBucketName?: string | null,
+  ): Promise<string> {
+    return this.adapter.getDownloadUrl(objectPath, gcsBucketName);
   }
 
-  deleteObject(objectPath: string): Promise<void> {
-    return this.adapter.deleteObject(objectPath);
+  deleteObject(
+    objectPath: string,
+    gcsBucketName?: string | null,
+  ): Promise<void> {
+    return this.adapter.deleteObject(objectPath, gcsBucketName);
   }
 
-  async fileExists(objectPath: string): Promise<boolean> {
-    return this.adapter.fileExists(objectPath);
+  async fileExists(
+    objectPath: string,
+    gcsBucketName?: string | null,
+  ): Promise<boolean> {
+    return this.adapter.fileExists(objectPath, gcsBucketName);
   }
 }

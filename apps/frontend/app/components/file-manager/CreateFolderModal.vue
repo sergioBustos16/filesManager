@@ -1,51 +1,72 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useFetch } from '#app';
+import { ref, watch } from 'vue';
 
 const open = defineModel<boolean>('open', { default: false });
 
-const name = ref('');
-const storagePrefixId = ref(null);
-const prefixOptions = ref([]);
-const loadingPrefixes = ref(false);
-const emit = defineEmits<{ submit: [name: string, storagePrefixId?: string] }>();
+const props = withDefaults(
+  defineProps<{
+    /** When true, show GCS bucket picker (requires Admin). */
+    isAdmin?: boolean;
+  }>(),
+  { isAdmin: false },
+);
 
-// Fetch available storage prefixes for admin users
-const loadStoragePrefixes = async () => {
-  if (loadingPrefixes.value) return;
-  loadingPrefixes.value = true;
+const { $apiFetch } = useNuxtApp();
+
+const name = ref('');
+
+const gcsBuckets = ref<string[]>([]);
+const defaultGcsBucket = ref('');
+const selectedGcsBucket = ref<string | null>(null);
+const loadingGcsBuckets = ref(false);
+
+const emit = defineEmits<{
+  submit: [payload: { name: string; gcsBucketName?: string }];
+}>();
+
+const loadGcsBuckets = async () => {
+  if (!props.isAdmin) return;
+  loadingGcsBuckets.value = true;
   try {
-    const { data } = await useFetch('/api/storage-prefixes');
-    prefixOptions.value = data.value?.map(p => ({
-      id: p.id,
-      label: p.label,
-      slug: p.slug
-    })) ?? [];
+    const data = await $apiFetch<{
+      buckets: string[];
+      defaultBucket: string;
+    }>('/storage/gcs-buckets');
+    gcsBuckets.value = data.buckets ?? [];
+    defaultGcsBucket.value = data.defaultBucket ?? '';
+    selectedGcsBucket.value =
+      data.defaultBucket || data.buckets?.[0] || null;
   } catch (error) {
-    console.error('Failed to load storage prefixes:', error);
+    console.error('Failed to load GCS buckets:', error);
+    gcsBuckets.value = [];
   } finally {
-    loadingPrefixes.value = false;
+    loadingGcsBuckets.value = false;
   }
 };
 
-watch(open, (v) => {
-  if (v) {
-    name.value = '';
-    storagePrefixId.value = null;
-    loadStoragePrefixes();
-  }
-});
+watch(
+  () => open.value,
+  (v) => {
+    if (v) {
+      name.value = '';
+      selectedGcsBucket.value = null;
+      void loadGcsBuckets();
+    }
+  },
+);
 
 const onSubmit = () => {
   const n = name.value.trim();
   if (n.length < 1) return;
 
-  const payload: { name: string; storagePrefixId?: string } = { name: n };
+  const payload: { name: string; gcsBucketName?: string } = { name: n };
 
-  // Only include storagePrefixId if it's set and not the default (optional)
-  // For now, we'll send it if selected, backend will handle validation
-  if (storagePrefixId.value) {
-    payload.storagePrefixId = storagePrefixId.value;
+  if (
+    props.isAdmin &&
+    selectedGcsBucket.value &&
+    selectedGcsBucket.value !== defaultGcsBucket.value
+  ) {
+    payload.gcsBucketName = selectedGcsBucket.value;
   }
 
   emit('submit', payload);
@@ -67,11 +88,22 @@ const onSubmit = () => {
         class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
         @click.stop
       >
-        <h2 id="create-folder-title" class="text-lg font-semibold text-slate-900">New folder</h2>
-        <p class="mt-1 text-sm text-slate-500">Create an empty folder. You can add group access afterward.</p>
+        <h2 id="create-folder-title" class="text-lg font-semibold text-slate-900">
+          New folder
+        </h2>
+        <p class="mt-1 text-sm text-slate-500">
+          Create an empty folder. You can add group access afterward. Files are
+          stored under
+          <code class="rounded bg-slate-100 px-1 text-xs">folderId/fileId</code>
+          inside the selected GCS bucket.
+        </p>
         <form class="mt-4 space-y-6" @submit.prevent="onSubmit">
           <div>
-            <label class="mb-1 block text-sm font-medium text-slate-700" for="folder-name">Name</label>
+            <label
+              class="mb-1 block text-sm font-medium text-slate-700"
+              for="folder-name"
+              >Name</label
+            >
             <input
               id="folder-name"
               v-model="name"
@@ -82,26 +114,29 @@ const onSubmit = () => {
             />
           </div>
 
-          <!-- Storage Prefix Selector (Admin only) -->
-          <div v-if="loadingPrefixes" class="text-center py-2">
-            Loading prefixes...
-          </div>
-          <div v-else-if="prefixOptions.length > 0" class="mb-4">
-            <label class="mb-1 block text-sm font-medium text-slate-700" for="storage-prefix">
-              Storage location
-            </label>
+          <div v-if="isAdmin && (loadingGcsBuckets || gcsBuckets.length > 0)">
+            <label
+              class="mb-1 block text-sm font-medium text-slate-700"
+              for="gcs-bucket"
+              >GCS bucket</label
+            >
+            <p class="mb-2 text-xs text-slate-500">
+              Same GCP project as configured in the API. Bucket is fixed at
+              creation time.
+            </p>
+            <div v-if="loadingGcsBuckets" class="py-2 text-center text-sm text-slate-500">
+              Loading buckets…
+            </div>
             <select
-              id="storage-prefix"
-              v-model="storagePrefixId"
+              v-else
+              id="gcs-bucket"
+              v-model="selectedGcsBucket"
               class="w-full rounded-lg border border-slate-200 px-3 py-2 text-slate-900 outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option v-for="prefix in prefixOptions" :key="prefix.id" :value="prefix.id">
-                {{ prefix.label }}
+              <option v-for="b in gcsBuckets" :key="b" :value="b">
+                {{ b }}{{ b === defaultGcsBucket ? ' (default)' : '' }}
               </option>
             </select>
-            <p class="mt-1 text-xs text-slate-500">
-              Select where this folder's files will be stored. Default uses the system bucket.
-            </p>
           </div>
 
           <div class="flex justify-end gap-2">

@@ -108,9 +108,16 @@ const onOpenFolderFromGrid = (id: string) => {
 
 const onBack = () => clearFolderQuery();
 
-const onCreateFolderSubmit = async (payload: { name: string; storagePrefixId?: string }) => {
+const onCreateFolderSubmit = async (payload: {
+  name: string;
+  gcsBucketName?: string;
+}) => {
   try {
-    await create({ name: payload.name, storagePrefixId: payload.storagePrefixId, permissions: [] });
+    await create({
+      name: payload.name,
+      gcsBucketName: payload.gcsBucketName,
+      permissions: [],
+    });
     toast.show('Folder created', 'success');
     await loadFolders();
   } catch {
@@ -224,7 +231,11 @@ const onPermissionsSaved = async () => {
       </main>
     </div>
     <FileManagerToastHost />
-    <FileManagerCreateFolderModal v-model:open="createModalOpen" @submit="onCreateFolderSubmit" />
+    <FileManagerCreateFolderModal
+      v-model:open="createModalOpen"
+      :is-admin="isAdmin"
+      @submit="onCreateFolderSubmit"
+    />
     <FileManagerPermissionsModal
       v-model:open="permModalOpen"
       :folder-id="selectedFolderId"

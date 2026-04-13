@@ -44,18 +44,15 @@ export class FilesService {
     this.validateUpload(dto.mimeType, dto.size);
     const fileId = randomUUID();
 
-    // Get the folder to retrieve the storage prefix
     const folder = await this.foldersRepository.findOne({
       where: { id: folderId },
-      relations: ['storagePrefix'],
     });
 
-    const prefixSlug = folder?.storagePrefix?.slug;
     return this.storageService.createUploadRequest(
       folderId,
       fileId,
       dto.mimeType,
-      prefixSlug,
+      folder?.gcsBucketName ?? null,
     );
   }
 
@@ -67,8 +64,15 @@ export class FilesService {
   ) {
     await this.assertCanWrite(folderId, groupNames, userId);
 
+    const folder = await this.foldersRepository.findOne({
+      where: { id: folderId },
+    });
+
     // Verify the file exists in storage before registering metadata
-    const exists = await this.storageService.fileExists(dto.path);
+    const exists = await this.storageService.fileExists(
+      dto.path,
+      folder?.gcsBucketName ?? null,
+    );
     if (!exists) {
       throw new NotFoundException(
         'File not found in storage. Please upload first.',
@@ -94,11 +98,17 @@ export class FilesService {
     userId: string,
   ) {
     await this.assertCanRead(folderId, groupNames, userId);
-    const file = await this.filesRepository.findOneBy({ id: fileId, folderId });
+    const file = await this.filesRepository.findOne({
+      where: { id: fileId, folderId },
+      relations: ['folder'],
+    });
     if (!file) {
       throw new NotFoundException('File not found.');
     }
-    const signedUrl = await this.storageService.getDownloadUrl(file.path);
+    const signedUrl = await this.storageService.getDownloadUrl(
+      file.path,
+      file.folder?.gcsBucketName ?? null,
+    );
     return { signedUrl };
   }
 
@@ -109,11 +119,17 @@ export class FilesService {
     userId: string,
   ) {
     await this.assertCanDelete(folderId, groupNames, userId);
-    const file = await this.filesRepository.findOneBy({ id: fileId, folderId });
+    const file = await this.filesRepository.findOne({
+      where: { id: fileId, folderId },
+      relations: ['folder'],
+    });
     if (!file) {
       throw new NotFoundException('File not found.');
     }
-    await this.storageService.deleteObject(file.path);
+    await this.storageService.deleteObject(
+      file.path,
+      file.folder?.gcsBucketName ?? null,
+    );
     await this.filesRepository.remove(file);
     return { success: true };
   }

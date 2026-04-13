@@ -4,8 +4,16 @@ export type UploadUrlResult = {
 };
 
 export interface StorageAdapter {
-  getUploadUrl(objectPath: string, mimeType: string): Promise<string>;
-  getDownloadUrl(objectPath: string): Promise<string>;
-  deleteObject(objectPath: string): Promise<void>;
-  fileExists(objectPath: string): Promise<boolean>;
+  /** `gcsBucketName` used when backend is GCS; omitted/null uses env default bucket. */
+  getUploadUrl(
+    objectPath: string,
+    mimeType: string,
+    gcsBucketName?: string | null,
+  ): Promise<string>;
+  getDownloadUrl(
+    objectPath: string,
+    gcsBucketName?: string | null,
+  ): Promise<string>;
+  deleteObject(objectPath: string, gcsBucketName?: string | null): Promise<void>;
+  fileExists(objectPath: string, gcsBucketName?: string | null): Promise<boolean>;
 }
