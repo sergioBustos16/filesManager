@@ -44,7 +44,9 @@ export class FoldersService {
         .innerJoin('folder.permissions', 'permission')
         .innerJoin('permission.group', 'group')
         .where('group.name IN (:...groupNames)', { groupNames })
-        .andWhere('permission.canRead = true')
+        .andWhere(
+          '(permission.canRead = true OR permission.canWrite = true OR permission.canDelete = true)',
+        )
         .getMany();
       viaGroupFolders.forEach((f) => idSet.add(f.id));
     }
@@ -61,6 +63,10 @@ export class FoldersService {
   }
 
   async create(createdById: string, dto: CreateFolderDto, groupNames: string[]) {
+    if (!groupNames.includes('Admin')) {
+      throw new ForbiddenException('Only admins can create folders.');
+    }
+
     let gcsBucketName: string | null = null;
     const rawBucket = dto.gcsBucketName?.trim();
     if (rawBucket) {
@@ -87,7 +93,7 @@ export class FoldersService {
 
     if (dto.permissions?.length) {
       const permissions = dto.permissions.map((permission) =>
-        this.permissionsRepository.create({
+        this.normalizePermissionFlags({
           folderId: folder.id,
           groupId: permission.groupId,
           canRead: permission.canRead,
@@ -95,7 +101,12 @@ export class FoldersService {
           canDelete: permission.canDelete,
         }),
       );
-      await this.permissionsRepository.save(permissions);
+      const createdPermissions = permissions.map((permission) =>
+        this.permissionsRepository.create({
+          ...permission,
+        }),
+      );
+      await this.permissionsRepository.save(createdPermissions);
     }
 
     return this.foldersRepository.findOne({
@@ -121,12 +132,13 @@ export class FoldersService {
       return folder;
     }
 
-    const canRead = folder.permissions.some(
+    const canAccess = folder.permissions.some(
       (permission) =>
-        permission.canRead && groupNames.includes(permission.group.name),
+        this.canAccessFolder(permission) &&
+        groupNames.includes(permission.group.name),
     );
-    if (!canRead) {
-      throw new ForbiddenException('No read access for this folder.');
+    if (!canAccess) {
+      throw new ForbiddenException('No access for this folder.');
     }
 
     return folder;
@@ -144,10 +156,9 @@ export class FoldersService {
     }
 
     const isAdmin = groupNames.includes('Admin');
-    const isOwner = folder.createdById === userId;
-    if (!isAdmin && !isOwner) {
+    if (!isAdmin) {
       throw new ForbiddenException(
-        'Only the folder owner or an admin can change permissions.',
+        'Only admins can change folder permissions.',
       );
     }
 
@@ -162,10 +173,26 @@ export class FoldersService {
       });
     }
 
-    permission.canRead = dto.canRead;
-    permission.canWrite = dto.canWrite;
-    permission.canDelete = dto.canDelete;
+    const normalized = this.normalizePermissionFlags(dto);
+    permission.canRead = normalized.canRead;
+    permission.canWrite = normalized.canWrite;
+    permission.canDelete = normalized.canDelete;
 
     return this.permissionsRepository.save(permission);
+  }
+
+  private canAccessFolder(permission: FolderPermission) {
+    return permission.canRead || permission.canWrite || permission.canDelete;
+  }
+
+  private normalizePermissionFlags<T extends {
+    canRead: boolean;
+    canWrite: boolean;
+    canDelete: boolean;
+  }>(permission: T): T {
+    return {
+      ...permission,
+      canRead: permission.canWrite ? true : permission.canRead,
+    };
   }
 }

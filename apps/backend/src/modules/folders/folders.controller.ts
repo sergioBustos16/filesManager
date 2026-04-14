@@ -6,12 +6,14 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
 import { FoldersService } from './folders.service';
 import { CreateFolderDto } from './dto/create-folder.dto';
 import { UpsertPermissionDto } from './dto/upsert-permission.dto';
 import { CurrentUser } from '../../common/current-user.decorator';
 import type { AuthUser } from '../../common/types';
+import { AdminGuard } from '../../common/admin.guard';
 
 @Controller('folders')
 export class FoldersController {
@@ -23,6 +25,7 @@ export class FoldersController {
   }
 
   @Post()
+  @UseGuards(AdminGuard)
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateFolderDto) {
     return this.foldersService.create(user.sub, dto, user.groups);
   }

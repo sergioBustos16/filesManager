@@ -52,6 +52,7 @@ describe('AuthService', () => {
         id: 'user-uuid',
         email: 'test@example.com',
         name: 'Test User',
+        isSuperAdmin: true,
         passwordHash: 'hashed-password',
         groups: [{ name: 'Admin' }, { name: 'Users' }],
       };
@@ -83,6 +84,7 @@ describe('AuthService', () => {
         email: 'test@example.com',
         name: 'Test User',
         groups: ['Admin', 'Users'],
+        isSuperAdmin: true,
       });
     });
 
@@ -102,6 +104,7 @@ describe('AuthService', () => {
         id: 'user-uuid',
         email: 'test@example.com',
         name: 'Test User',
+        isSuperAdmin: false,
         passwordHash: 'hashed-password',
         groups: [],
       };
@@ -145,6 +148,7 @@ describe('AuthService', () => {
         email: 'test@example.com',
         name: 'Test User',
         groups: [],
+        isSuperAdmin: false,
       });
     });
   });

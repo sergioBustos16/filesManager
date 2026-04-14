@@ -22,8 +22,8 @@ export class UsersController {
 
   @Post('')
   @UseGuards(AdminGuard)
-  create(@Body() dto: CreateUserDto) {
-    return this.usersService.createUser(dto);
+  create(@CurrentUser() user: AuthUser, @Body() dto: CreateUserDto) {
+    return this.usersService.createUser(dto, user);
   }
 
   @Get('')

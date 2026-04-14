@@ -24,6 +24,9 @@ export class User {
   @Column()
   passwordHash!: string;
 
+  @Column({ default: false })
+  isSuperAdmin!: boolean;
+
   @CreateDateColumn()
   createdAt!: Date;
 

@@ -19,6 +19,18 @@ const form = reactive({
   canDelete: false,
 });
 
+const onReadChange = () => {
+  if (!form.canRead) {
+    form.canWrite = false;
+  }
+};
+
+const onWriteChange = () => {
+  if (form.canWrite) {
+    form.canRead = true;
+  }
+};
+
 const reload = async () => {
   folders.value = await list();
   groups.value = await $apiFetch('/groups');
@@ -76,8 +88,12 @@ const onCreate = async () => {
           {{ group.name }}
         </option>
       </select>
-      <label class="mr-4 text-sm"><input v-model="form.canRead" type="checkbox" /> Read</label>
-      <label class="mr-4 text-sm"><input v-model="form.canWrite" type="checkbox" /> Write</label>
+      <label class="mr-4 text-sm">
+        <input v-model="form.canRead" type="checkbox" @change="onReadChange" /> Read
+      </label>
+      <label class="mr-4 text-sm">
+        <input v-model="form.canWrite" type="checkbox" @change="onWriteChange" /> Edit
+      </label>
       <label class="text-sm"><input v-model="form.canDelete" type="checkbox" /> Delete</label>
       <button
         type="submit"

@@ -9,7 +9,9 @@ import {
 defineProps<{
   folderName?: string | null;
   hasFolderOpen: boolean;
+  canCreateFolder?: boolean;
   canManagePermissions?: boolean;
+  canUpload?: boolean;
   busy?: boolean;
 }>();
 
@@ -52,6 +54,7 @@ const onFileChange = (e: Event) => {
 
     <div class="flex flex-wrap items-center gap-2">
       <button
+        v-if="canCreateFolder !== false"
         type="button"
         :disabled="busy"
         class="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
@@ -61,7 +64,7 @@ const onFileChange = (e: Event) => {
         New folder
       </button>
       <button
-        v-if="hasFolderOpen"
+        v-if="hasFolderOpen && canUpload !== false"
         type="button"
         :disabled="busy"
         class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"

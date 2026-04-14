@@ -5,7 +5,12 @@ import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { Group } from '../groups/entities/group.entity';
 import { CreateUserDto } from './dto/create-user.dto';
-import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
 jest.mock('bcrypt');
@@ -14,6 +19,20 @@ describe('UsersService', () => {
   let service: UsersService;
   let userRepository: Repository<User>;
   let groupRepository: Repository<Group>;
+  const superAdminActor = {
+    sub: 'super-admin-id',
+    email: 'super@example.com',
+    name: 'Super Admin',
+    groups: ['Admin'],
+    isSuperAdmin: true,
+  };
+  const adminActor = {
+    sub: 'admin-id',
+    email: 'admin@example.com',
+    name: 'Admin',
+    groups: ['Admin'],
+    isSuperAdmin: false,
+  };
 
   const mockUserRepository = {
     create: jest.fn(),
@@ -24,6 +43,7 @@ describe('UsersService', () => {
 
   const mockGroupRepository = {
     find: jest.fn(),
+    findOne: jest.fn(),
     save: jest.fn(),
   };
 
@@ -90,7 +110,7 @@ describe('UsersService', () => {
       });
 
       // Execute
-      const result = await service.createUser(createUserDto);
+      const result = await service.createUser(createUserDto, superAdminActor);
 
       // Verify
       expect(result).toEqual({
@@ -104,6 +124,7 @@ describe('UsersService', () => {
         email: createUserDto.email,
         name: createUserDto.name,
         passwordHash: 'hashed-password',
+        isSuperAdmin: false,
         groups: [],
       });
       expect(mockUserRepository.save).toHaveBeenCalled();
@@ -119,10 +140,10 @@ describe('UsersService', () => {
     it('should throw ConflictException if email already exists', async () => {
       mockUserRepository.existsBy.mockResolvedValue(true);
 
-      await expect(service.createUser(createUserDto)).rejects.toThrow(
+      await expect(service.createUser(createUserDto, superAdminActor)).rejects.toThrow(
         ConflictException,
       );
-      await expect(service.createUser(createUserDto)).rejects.toThrow(
+      await expect(service.createUser(createUserDto, superAdminActor)).rejects.toThrow(
         'Email already exists.',
       );
     });
@@ -132,10 +153,10 @@ describe('UsersService', () => {
       // Ensure existsBy returns false so we get past the email check
       mockUserRepository.existsBy.mockResolvedValue(false);
 
-      await expect(service.createUser(invalidDto)).rejects.toThrow(
+      await expect(service.createUser(invalidDto, superAdminActor)).rejects.toThrow(
         BadRequestException,
       );
-      await expect(service.createUser(invalidDto)).rejects.toThrow(
+      await expect(service.createUser(invalidDto, superAdminActor)).rejects.toThrow(
         'At least one group must be specified',
       );
     });
@@ -145,10 +166,10 @@ describe('UsersService', () => {
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-password');
       mockGroupRepository.find.mockResolvedValue([]); // No groups found
 
-      await expect(service.createUser(createUserDto)).rejects.toThrow(
+      await expect(service.createUser(createUserDto, superAdminActor)).rejects.toThrow(
         NotFoundException,
       );
-      await expect(service.createUser(createUserDto)).rejects.toThrow(
+      await expect(service.createUser(createUserDto, superAdminActor)).rejects.toThrow(
         `Group(s) not found: ${createUserDto.groupIds[0]}`,
       );
     });
@@ -191,7 +212,7 @@ describe('UsersService', () => {
         users: [{ id: 'user-uuid' }],
       });
 
-      const result = await service.createUser(dtoWithDuplicates);
+      const result = await service.createUser(dtoWithDuplicates, superAdminActor);
 
       expect(result).toEqual({
         id: 'user-uuid',
@@ -206,6 +227,106 @@ describe('UsersService', () => {
         })
       );
     });
+
+    it('allows a normal admin to create a non-admin user', async () => {
+      mockUserRepository.existsBy.mockResolvedValue(false);
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-password');
+      mockUserRepository.create.mockReturnValue({
+        id: 'user-uuid',
+        email: createUserDto.email,
+        name: createUserDto.name,
+        passwordHash: 'hashed-password',
+        groups: [],
+      });
+      mockUserRepository.save.mockResolvedValue({
+        id: 'user-uuid',
+        email: createUserDto.email,
+        name: createUserDto.name,
+        passwordHash: 'hashed-password',
+        groups: [],
+      });
+      mockGroupRepository.find.mockResolvedValue([
+        {
+          id: createUserDto.groupIds[0],
+          name: 'Editors',
+          users: [],
+        },
+      ]);
+
+      const result = await service.createUser(createUserDto, adminActor);
+
+      expect(result).toEqual({
+        id: 'user-uuid',
+        email: createUserDto.email,
+        name: createUserDto.name,
+      });
+    });
+
+    it('rejects a normal admin creating an admin user', async () => {
+      mockUserRepository.existsBy.mockResolvedValue(false);
+      mockGroupRepository.findOne.mockResolvedValue({
+        id: 'admin-group-id',
+        name: 'Admin',
+      });
+
+      await expect(
+        service.createUser(
+          { ...createUserDto, isAdmin: true } as CreateUserDto & {
+            isAdmin: boolean;
+          },
+          adminActor,
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('adds the Admin group automatically when a protected super admin creates an admin user', async () => {
+      mockUserRepository.existsBy.mockResolvedValue(false);
+      mockGroupRepository.findOne.mockResolvedValue({
+        id: 'admin-group-id',
+        name: 'Admin',
+      });
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-password');
+      mockUserRepository.create.mockReturnValue({
+        id: 'user-uuid',
+        email: createUserDto.email,
+        name: createUserDto.name,
+        passwordHash: 'hashed-password',
+        groups: [],
+      });
+      mockUserRepository.save.mockResolvedValue({
+        id: 'user-uuid',
+        email: createUserDto.email,
+        name: createUserDto.name,
+        passwordHash: 'hashed-password',
+        groups: [],
+      });
+      mockGroupRepository.find.mockResolvedValue([
+        {
+          id: createUserDto.groupIds[0],
+          name: 'Editors',
+          users: [],
+        },
+        {
+          id: 'admin-group-id',
+          name: 'Admin',
+          users: [],
+        },
+      ]);
+
+      await service.createUser(
+        { ...createUserDto, isAdmin: true } as CreateUserDto & {
+          isAdmin: boolean;
+        },
+        superAdminActor,
+      );
+
+      expect(mockGroupRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ id: expect.anything() }),
+          relations: ['users'],
+        }),
+      );
+    });
   });
 
   describe('findAll', () => {
@@ -216,6 +337,7 @@ describe('UsersService', () => {
           email: 'user1@example.com',
           name: 'User One',
           passwordHash: 'hash1',
+          isSuperAdmin: true,
           groups: [
             { id: 'group-1', name: 'Group 1' },
             { id: 'group-2', name: 'Group 2' },
@@ -226,6 +348,7 @@ describe('UsersService', () => {
           email: 'user2@example.com',
           name: 'User Two',
           passwordHash: 'hash2',
+          isSuperAdmin: false,
           groups: [
             { id: 'group-1', name: 'Group 1' },
           ],
@@ -241,6 +364,7 @@ describe('UsersService', () => {
           id: 'user-1',
           email: 'user1@example.com',
           name: 'User One',
+          isSuperAdmin: true,
           groups: [
             { id: 'group-1', name: 'Group 1' },
             { id: 'group-2', name: 'Group 2' },
@@ -250,6 +374,7 @@ describe('UsersService', () => {
           id: 'user-2',
           email: 'user2@example.com',
           name: 'User Two',
+          isSuperAdmin: false,
           groups: [
             { id: 'group-1', name: 'Group 1' },
           ],

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,23 +11,28 @@ import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
 import { Group } from '../groups/entities/group.entity';
 import { CreateUserDto } from './dto/create-user.dto';
+import { AuthUser } from '../../common/types';
+import { isProtectedSuperAdmin } from '../../common/authz';
 
 @Injectable()
 export class UsersService {
+  private static readonly ADMIN_GROUP_NAME = 'Admin';
+
   constructor(
     @InjectRepository(User) private readonly usersRepository: Repository<User>,
     @InjectRepository(Group) private readonly groupsRepository: Repository<Group>,
   ) {}
 
-  async createUser(dto: CreateUserDto) {
+  async createUser(dto: CreateUserDto, actor: AuthUser) {
     // Check if email already exists
     const exists = await this.usersRepository.existsBy({ email: dto.email });
     if (exists) {
       throw new ConflictException('Email already exists.');
     }
 
-    // Validate that at least one group is provided
-    if (!dto.groupIds || dto.groupIds.length === 0) {
+    const effectiveGroupIds = await this.resolveEffectiveGroupIds(dto, actor);
+
+    if (effectiveGroupIds.length === 0) {
       throw new BadRequestException('At least one group must be specified');
     }
 
@@ -38,11 +44,12 @@ export class UsersService {
       email: dto.email,
       name: dto.name,
       passwordHash,
+      isSuperAdmin: false,
       groups: [],
     });
     const savedUser = await this.usersRepository.save(user);
 
-    const uniqueGroupIds = [...new Set(dto.groupIds)];
+    const uniqueGroupIds = [...new Set(effectiveGroupIds)];
 
     const groups = await this.groupsRepository.find({
       where: { id: In(uniqueGroupIds) },
@@ -86,10 +93,37 @@ export class UsersService {
       id: user.id,
       email: user.email,
       name: user.name,
+      isSuperAdmin: user.isSuperAdmin,
       groups: user.groups.map(group => ({
         id: group.id,
         name: group.name,
       })),
     }));
+  }
+
+  private async resolveEffectiveGroupIds(dto: CreateUserDto, actor: AuthUser) {
+    const requestedGroupIds = [...new Set(dto.groupIds ?? [])];
+    const adminGroup = await this.groupsRepository.findOne({
+      where: { name: UsersService.ADMIN_GROUP_NAME },
+    });
+    const requestsAdminMembership =
+      dto.isAdmin === true ||
+      (!!adminGroup && requestedGroupIds.includes(adminGroup.id));
+
+    if (!requestsAdminMembership) {
+      return requestedGroupIds;
+    }
+
+    if (!isProtectedSuperAdmin(actor)) {
+      throw new ForbiddenException(
+        'Only the protected super admin can create admin users.',
+      );
+    }
+
+    if (!adminGroup) {
+      throw new NotFoundException('Admin group not found.');
+    }
+
+    return [...new Set([...requestedGroupIds, adminGroup.id])];
   }
 }

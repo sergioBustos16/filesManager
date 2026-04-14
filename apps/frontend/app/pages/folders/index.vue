@@ -92,7 +92,30 @@ const isOwner = computed(
     !!user.value &&
     folderDetail.value.createdById === user.value.sub,
 );
-const canManagePermissions = computed(() => isAdmin.value || isOwner.value);
+const canManagePermissions = computed(() => isAdmin.value);
+const effectiveFolderPermissions = computed(() => {
+  if (isAdmin.value || isOwner.value) {
+    return { canUpload: true, canDeleteFile: true };
+  }
+
+  const userGroups = new Set(user.value?.groups ?? []);
+  const permissions = folderDetail.value?.permissions ?? [];
+
+  return {
+    canUpload: permissions.some(
+      (permission) =>
+        !!permission.group?.name &&
+        userGroups.has(permission.group.name) &&
+        permission.canWrite,
+    ),
+    canDeleteFile: permissions.some(
+      (permission) =>
+        !!permission.group?.name &&
+        userGroups.has(permission.group.name) &&
+        permission.canDelete,
+    ),
+  };
+});
 
 const onSidebarSelect = (id: string) => {
   openFolderQuery(id);
@@ -200,7 +223,9 @@ const onPermissionsSaved = async () => {
         <FileManagerToolbar
           :folder-name="folderDetail?.name"
           :has-folder-open="!!selectedFolderId"
+          :can-create-folder="isAdmin"
           :can-manage-permissions="canManagePermissions"
+          :can-upload="effectiveFolderPermissions.canUpload"
           :busy="busyUpload"
           @back="onBack"
           @create-folder="createModalOpen = true"
@@ -223,6 +248,7 @@ const onPermissionsSaved = async () => {
               :folders="[]"
               :files="files"
               :loading="loadingDetail"
+              :can-delete="effectiveFolderPermissions.canDeleteFile"
               @download="onDownload"
               @delete="onDeleteFile"
             />

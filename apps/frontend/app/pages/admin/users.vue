@@ -10,14 +10,27 @@ if (!user.value?.groups?.includes('Admin')) {
 }
 
 const groups = ref<{ id: string; name: string }[]>([]);
-const users = ref<Array<{ id: string; email: string; name: string; groups: { id: string; name: string }[] }>>([]);
+const users = ref<
+  Array<{
+    id: string;
+    email: string;
+    name: string;
+    isSuperAdmin: boolean;
+    groups: { id: string; name: string }[];
+  }>
+>([]);
 
 const form = reactive({
   name: '',
   email: '',
   password: '',
   groupIds: [] as string[],
+  isAdmin: false,
 });
+
+const assignableGroups = computed(() =>
+  groups.value.filter((group) => group.name !== 'Admin'),
+);
 
 const reload = async () => {
   try {
@@ -40,30 +53,18 @@ const createUser = async () => {
         email: form.email,
         password: form.password,
         groupIds: form.groupIds,
+        isAdmin: form.isAdmin,
       },
     });
     form.name = '';
     form.email = '';
     form.password = '';
     form.groupIds = [];
+    form.isAdmin = false;
     await reload();
     $toast.success('User created successfully');
   } catch (error: any) {
     $toast.error(error.response?._data?.message || 'Failed to create user');
-    console.error(error);
-  }
-};
-
-const deleteUser = async (userId: string) => {
-  if (!window.confirm('Are you sure you want to delete this user?')) {
-    return;
-  }
-  try {
-    await $apiFetch(`/users/${userId}`, { method: 'DELETE' });
-    await reload();
-    $toast.success('User deleted successfully');
-  } catch (error: any) {
-    $toast.error(error.response?._data?.message || 'Failed to delete user');
     console.error(error);
   }
 };
@@ -85,6 +86,10 @@ const deleteUser = async (userId: string) => {
       @submit.prevent="createUser"
     >
       <h2 class="text-lg font-medium text-slate-900">Create New User</h2>
+      <p class="mt-2 text-sm text-slate-500">
+        Turn on <strong>Admin access</strong> to add the user to the Admin group automatically. Only the protected
+        super admin can complete that action.
+      </p>
       <div class="mt-4 grid gap-4 sm:grid-cols-2">
         <div>
           <label class="mb-1.5 block text-sm font-medium text-slate-700" for="name">Name</label>
@@ -127,20 +132,25 @@ const deleteUser = async (userId: string) => {
             id="groups"
             v-model="form.groupIds"
             multiple
-            required
             class="w-full rounded-lg border border-slate-200 px-3 py-2"
             size="3"
           >
-            <option v-for="group in groups" :key="group.id" :value="group.id">
+            <option v-for="group in assignableGroups" :key="group.id" :value="group.id">
               {{ group.name }}
             </option>
           </select>
           <p class="mt-1 text-xs text-slate-500">Hold Ctrl/Cmd to select multiple groups</p>
         </div>
+        <div class="flex items-end">
+          <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+            <input v-model="form.isAdmin" type="checkbox" class="rounded border-slate-300" />
+            Grant Admin access
+          </label>
+        </div>
       </div>
       <button
         type="submit"
-        :disabled="form.groupIds.length === 0"
+        :disabled="!form.isAdmin && form.groupIds.length === 0"
         class="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
       >
         Create User
@@ -163,14 +173,21 @@ const deleteUser = async (userId: string) => {
               <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">
                 Groups
               </th>
-              <th class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">
-                Actions
-              </th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200">
             <tr v-for="u in users" :key="u.id" class="hover:bg-slate-50">
-              <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-900">{{ u.name }}</td>
+              <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-900">
+                <div class="flex items-center gap-2">
+                  <span>{{ u.name }}</span>
+                  <span
+                    v-if="u.isSuperAdmin"
+                    class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"
+                  >
+                    Protected super admin
+                  </span>
+                </div>
+              </td>
               <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-900">{{ u.email }}</td>
               <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-600">
                 <span v-if="u.groups?.length">
@@ -178,17 +195,9 @@ const deleteUser = async (userId: string) => {
                 </span>
                 <span v-else class="text-slate-400">No groups</span>
               </td>
-              <td class="whitespace-nowrap px-4 py-3 text-right text-sm">
-                <button
-                  class="text-red-600 hover:text-red-800"
-                  @click="deleteUser(u.id)"
-                >
-                  Delete
-                </button>
-              </td>
             </tr>
             <tr v-if="users.length === 0">
-              <td colspan="4" class="px-4 py-8 text-center text-sm text-slate-500">
+              <td colspan="3" class="px-4 py-8 text-center text-sm text-slate-500">
                 No users found
               </td>
             </tr>

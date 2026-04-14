@@ -39,6 +39,7 @@ export class AuthService {
       email: user.email,
       name: user.name,
       groups: user.groups?.map((group) => group.name) ?? [],
+      isSuperAdmin: user.isSuperAdmin ?? false,
     };
 
     return {

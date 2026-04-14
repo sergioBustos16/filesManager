@@ -3,6 +3,7 @@ type AuthUser = {
   email: string;
   name: string;
   groups: string[];
+  isSuperAdmin: boolean;
 };
 
 type AuthResponse = {

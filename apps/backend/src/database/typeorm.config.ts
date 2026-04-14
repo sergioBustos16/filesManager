@@ -14,5 +14,6 @@ export const buildTypeOrmConfig = (): TypeOrmModuleOptions => ({
   password: String(process.env.DATABASE_PASSWORD ?? 'postgres'),
   database: process.env.DATABASE_NAME ?? 'filesmanager',
   entities: [User, Group, Folder, FolderPermission, FileEntity, StoragePrefix],
+  migrations: [`${__dirname}/migrations/*{.ts,.js}`],
   synchronize: process.env.NODE_ENV !== 'production',
 });

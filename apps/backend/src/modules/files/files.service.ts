@@ -27,7 +27,7 @@ export class FilesService {
   ) {}
 
   async list(folderId: string, groupNames: string[], userId: string) {
-    await this.assertCanRead(folderId, groupNames, userId);
+    await this.assertCanViewFolderContents(folderId, groupNames, userId);
     return this.filesRepository.find({
       where: { folderId, status: FileStatus.READY },
       order: { createdAt: 'DESC' },
@@ -97,7 +97,7 @@ export class FilesService {
     groupNames: string[],
     userId: string,
   ) {
-    await this.assertCanRead(folderId, groupNames, userId);
+    await this.assertCanViewFolderContents(folderId, groupNames, userId);
     const file = await this.filesRepository.findOne({
       where: { id: fileId, folderId },
       relations: ['folder'],
@@ -142,6 +142,14 @@ export class FilesService {
     return this.assertPermission(folderId, groupNames, userId, 'canRead');
   }
 
+  private async assertCanViewFolderContents(
+    folderId: string,
+    groupNames: string[],
+    userId: string,
+  ) {
+    return this.assertPermission(folderId, groupNames, userId, 'canView');
+  }
+
   private async assertCanWrite(
     folderId: string,
     groupNames: string[],
@@ -162,7 +170,7 @@ export class FilesService {
     folderId: string,
     groupNames: string[],
     userId: string,
-    permission: 'canRead' | 'canWrite' | 'canDelete',
+    permission: 'canRead' | 'canWrite' | 'canDelete' | 'canView',
   ) {
     if (groupNames.includes('Admin')) {
       return;
@@ -181,13 +189,33 @@ export class FilesService {
       .innerJoin('permission.group', 'group')
       .where('permission.folderId = :folderId', { folderId })
       .andWhere('group.name IN (:...groupNames)', { groupNames })
-      .andWhere(`permission.${permission} = true`)
+      .andWhere(this.getPermissionCondition(permission))
       .getCount();
     if (!count) {
       throw new ForbiddenException(
-        `No ${permission.replace('can', '').toLowerCase()} access for this folder.`,
+        `No ${this.getPermissionLabel(permission)} access for this folder.`,
       );
     }
+  }
+
+  private getPermissionCondition(
+    permission: 'canRead' | 'canWrite' | 'canDelete' | 'canView',
+  ) {
+    if (permission === 'canView') {
+      return '(permission.canRead = true OR permission.canWrite = true OR permission.canDelete = true)';
+    }
+
+    return `permission.${permission} = true`;
+  }
+
+  private getPermissionLabel(
+    permission: 'canRead' | 'canWrite' | 'canDelete' | 'canView',
+  ) {
+    if (permission === 'canView') {
+      return 'view';
+    }
+
+    return permission.replace('can', '').toLowerCase();
   }
 
   private validateUpload(mimeType: string, size: number) {

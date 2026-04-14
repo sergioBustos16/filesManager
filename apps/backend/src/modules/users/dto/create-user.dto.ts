@@ -1,8 +1,9 @@
 import {
-  ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsEmail,
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsUUID,
   Length,
@@ -25,7 +26,10 @@ export class CreateUserDto {
   password!: string;
 
   @IsArray()
-  @ArrayMinSize(1)
   @IsUUID('4', { each: true })
   groupIds!: string[];
+
+  @IsBoolean()
+  @IsOptional()
+  isAdmin?: boolean;
 }

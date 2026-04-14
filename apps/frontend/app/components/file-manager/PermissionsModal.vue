@@ -73,6 +73,18 @@ const saveRow = async (row: Row) => {
     saving.value = false;
   }
 };
+
+const onReadChange = (row: Row) => {
+  if (!row.canRead) {
+    row.canWrite = false;
+  }
+};
+
+const onWriteChange = (row: Row) => {
+  if (row.canWrite) {
+    row.canRead = true;
+  }
+};
 </script>
 
 <template>
@@ -91,8 +103,9 @@ const saveRow = async (row: Row) => {
       >
         <h2 id="perm-title" class="text-lg font-semibold text-slate-900">Folder permissions</h2>
         <p class="mt-1 text-sm text-slate-500">
-          Grant read / write / delete per group. Changes apply to this folder only (files follow folder access). The Admin
-          group is not listed; administrators always have full access to every folder.
+          Grant Read, Edit, and Delete per group. Edit includes list, download, and upload, while Delete stays separate.
+          Changes apply to this folder only. The Admin group is not listed; administrators always have full access to
+          every folder.
         </p>
         <div v-if="!assignableGroups.length" class="mt-4 text-sm text-slate-500">
           <template v-if="!groups.length">No groups exist yet. Create groups in Admin.</template>
@@ -106,7 +119,7 @@ const saveRow = async (row: Row) => {
               <tr class="border-b border-slate-200 text-left text-slate-600">
                 <th class="py-2 pr-4 font-medium">Group</th>
                 <th class="py-2 px-2 font-medium">Read</th>
-                <th class="py-2 px-2 font-medium">Write</th>
+                <th class="py-2 px-2 font-medium">Edit</th>
                 <th class="py-2 px-2 font-medium">Delete</th>
                 <th class="py-2 pl-2 font-medium" />
               </tr>
@@ -115,10 +128,20 @@ const saveRow = async (row: Row) => {
               <tr v-for="row in rows" :key="row.groupId" class="border-b border-slate-100">
                 <td class="py-2 pr-4 font-medium text-slate-800">{{ row.groupName }}</td>
                 <td class="py-2 px-2">
-                  <input v-model="row.canRead" type="checkbox" class="rounded border-slate-300" />
+                  <input
+                    v-model="row.canRead"
+                    type="checkbox"
+                    class="rounded border-slate-300"
+                    @change="onReadChange(row)"
+                  />
                 </td>
                 <td class="py-2 px-2">
-                  <input v-model="row.canWrite" type="checkbox" class="rounded border-slate-300" />
+                  <input
+                    v-model="row.canWrite"
+                    type="checkbox"
+                    class="rounded border-slate-300"
+                    @change="onWriteChange(row)"
+                  />
                 </td>
                 <td class="py-2 px-2">
                   <input v-model="row.canDelete" type="checkbox" class="rounded border-slate-300" />
